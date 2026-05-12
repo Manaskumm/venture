@@ -1,0 +1,28 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Venture {
+  id                String   @id @default(cuid())
+  userId            String   // Clerk User ID
+  destination       String
+  duration          Int
+  totalEstimatedCost Int
+  currencySymbol    String?
+  currencyCode      String?
+  mapQuery          String?
+  weatherSummary    String?
+  itinerary         Json     // Stores the full day-by-day JSON
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
