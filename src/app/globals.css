@@ -63,3 +63,16 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* Safely Hide Clerk Development Badge */
+div.cl-internal-b3al6g, 
+div.cl-internal-1dauvpw {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Target the fixed badge container directly */
+body > div[style*="z-index: 9999"][style*="bottom:"][style*="right:"] {
+  display: none !important;
+}
