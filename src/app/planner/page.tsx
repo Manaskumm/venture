@@ -281,6 +281,7 @@ export default function PlannerPage() {
   const [isStarted, setIsStarted] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<VentureMessage[]>([]);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [activeLayer, setActiveLayer] = useState<PlannerLayer>("chat");
   const [isVentureOpen, setIsVentureOpen] = useState(false);
@@ -344,7 +345,7 @@ export default function PlannerPage() {
       replyText.match(/{[\s\S]*}/);
 
     if (!jsonMatch) {
-      console.error("Venture: No JSON block found in reply.", replyText);
+      console.log("Venture: Natural language response received (No JSON block). Transitioning to Discovery Chat.");
       return null;
     }
 
@@ -380,7 +381,7 @@ export default function PlannerPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message,
-          history: [],
+          history: chatHistory.map(m => ({ content: m.content, sender: m.role === 'user' ? 'me' : 'other' })),
           profile,
         }),
       });
@@ -391,12 +392,20 @@ export default function PlannerPage() {
         throw new Error(data.error || "Unable to generate this trip.");
       }
 
-      const parsedTrip = extractTripData(data.reply || "");
+      const reply = data.reply || "";
+      const parsedTrip = extractTripData(reply);
+      
       if (!parsedTrip) {
-        throw new Error("The AI response did not include a usable itinerary.");
+        setChatHistory(prev => [
+          ...prev,
+          { role: "user", content: message },
+          { role: "venture", content: reply }
+        ]);
+        return;
       }
 
       setTripData(parsedTrip);
+      setChatHistory([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to generate this trip.";
       setGenerationError(message);
@@ -563,7 +572,7 @@ export default function PlannerPage() {
           <Settings className="w-5 h-5" />
         </button>
       </div>
-      
+
       <AnimatePresence mode="wait">
         {!isStarted && !hasPlan && activeLayer === 'chat' ? (
           /* PHASE 1: INITIAL ENTRY */
@@ -579,7 +588,7 @@ export default function PlannerPage() {
             />
           </motion.div>
         ) : (isGenerating || (!hasPlan && activeLayer === 'chat')) ? (
-          /* PHASE 2: DIRECT PLAN GENERATION */
+          /* PHASE 2: DIRECT PLAN GENERATION & DISCOVERY */
           <motion.div 
             key="discovery"
             initial={{ opacity: 0, y: 20 }}
@@ -602,9 +611,55 @@ export default function PlannerPage() {
                     }}
                     className="mt-7 rounded-xl bg-[#1488fc] px-6 py-3 text-xs font-black uppercase tracking-widest text-white transition hover:bg-[#1a94ff]"
                   >
-                    Edit Trip Basics
+                    Back to Chat
                   </button>
                 </div>
+              </div>
+            ) : chatHistory.length > 0 ? (
+              <div className="flex flex-col h-full w-full max-w-3xl mx-auto px-6 py-10 relative z-20">
+                 <div className="flex-1 overflow-y-auto scrollbar-hide space-y-6 pb-6 pr-2">
+                    {chatHistory.map((msg, i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div className={`max-w-[85%] p-5 rounded-3xl ${msg.role === 'user' ? 'bg-[#1488fc] text-white shadow-xl shadow-blue-500/20' : 'bg-[#1e1e22]/90 backdrop-blur-md border border-white/10 text-zinc-200 shadow-xl'}`}>
+                          <p className="text-[13px] leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      </motion.div>
+                    ))}
+                 </div>
+                  <div className="mt-4 w-full flex gap-3 rounded-3xl border border-white/10 bg-[#1e1e22]/80 backdrop-blur-md p-2 shadow-2xl">
+                    <textarea
+                      placeholder="Reply to Venture..."
+                      className="min-h-[60px] flex-1 resize-none bg-transparent px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/30"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val) {
+                            generatePlan(val);
+                            e.currentTarget.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={(e) => {
+                        const textarea = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
+                        const val = textarea.value.trim();
+                        if (val) {
+                          generatePlan(val);
+                          textarea.value = '';
+                        }
+                      }}
+                      className="self-end rounded-2xl bg-[#1488fc] p-4 text-white shadow-lg shadow-blue-500/30 transition hover:bg-[#1a94ff]"
+                    >
+                      <SendHorizontal className="h-5 w-5" />
+                    </button>
+                  </div>
               </div>
             ) : (
               <AILoader text="Planning" />
