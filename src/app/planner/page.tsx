@@ -193,29 +193,6 @@ function usesImperialWeather(tripData: TripData) {
   ].some((token) => placeText.includes(token));
 }
 
-function formatDayWeather(tripData: TripData, day?: TripData["itinerary"][number]) {
-  const weather = day?.weather;
-  if (!weather) return tripData.weatherSummary || "Weather estimate pending";
-
-  const wantsImperial = usesImperialWeather(tripData);
-  const rawTemp = wantsImperial
-    ? weather.temperatureF ??
-      (typeof weather.temperatureC === "number"
-        ? Math.round((weather.temperatureC * 9) / 5 + 32)
-        : undefined)
-    : weather.temperatureC ??
-      (typeof weather.temperatureF === "number"
-        ? Math.round(((weather.temperatureF - 32) * 5) / 9)
-        : undefined);
-
-  const temp = typeof rawTemp === "number" ? `${rawTemp}°${wantsImperial ? "F" : "C"}` : "";
-  const rain =
-    typeof weather.precipitationChance === "number"
-      ? `${weather.precipitationChance}% rain`
-      : "";
-
-  return [weather.summary, temp, rain].filter(Boolean).join(" · ");
-}
 
 function WeatherBadge({ tripData, day }: { tripData: TripData, day?: TripData["itinerary"][number] }) {
   const weather = day?.weather;
@@ -326,6 +303,7 @@ export default function PlannerPage() {
           setMapFocusQuery(null);
           setIsStarted(true);
           setActiveLayer("chat");
+          setSaveStatus("idle");
         }, 0);
       }
     } catch {
@@ -345,14 +323,13 @@ export default function PlannerPage() {
       replyText.match(/{[\s\S]*}/);
 
     if (!jsonMatch) {
-      console.log("Venture: Natural language response received (No JSON block). Transitioning to Discovery Chat.");
       return null;
     }
 
     try {
       return JSON.parse((jsonMatch[1] || jsonMatch[0]).trim()) as TripData;
     } catch (e) {
-      console.error("Venture: Failed to parse JSON.", e, "\n\nRaw text:", jsonMatch[1] || jsonMatch[0]);
+      console.error("Venture: Failed to parse itinerary JSON.", e);
       return null;
     }
   };
@@ -405,6 +382,7 @@ export default function PlannerPage() {
       }
 
       setTripData(parsedTrip);
+      setSaveStatus("idle");
       setChatHistory([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to generate this trip.";
@@ -459,6 +437,7 @@ export default function PlannerPage() {
 
       setTripData(revisedTrip);
       setMapFocusQuery(null);
+      setSaveStatus("idle");
       setVentureMessages((current) => [
         ...current,
         {
@@ -477,6 +456,23 @@ export default function PlannerPage() {
       ]);
     } finally {
       setIsRefiningTrip(false);
+    }
+  };
+
+  const saveCurrentTrip = async () => {
+    if (saveStatus === "saving" || saveStatus === "saved") return;
+
+    setSaveStatus("saving");
+    try {
+      const res = await fetch("/api/ventures/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...tripData, profile }),
+      });
+
+      setSaveStatus(res.ok ? "saved" : "error");
+    } catch {
+      setSaveStatus("error");
     }
   };
 
@@ -746,37 +742,24 @@ export default function PlannerPage() {
                     <p className="text-2xl font-bold text-white">{tripData.currencySymbol || '$'}{tripData.totalEstimatedCost.toLocaleString()}</p>
                     
                     {isSignedIn ? (
-                      <button 
+                      <button
                         disabled={saveStatus === "saving" || saveStatus === "saved"}
-                        onClick={async (e) => {
-                          setSaveStatus("saving");
-                          const btn = e.currentTarget;
-                          if (btn) {
-                            btn.innerText = 'Archiving...';
-                            btn.disabled = true;
-                          }
-                          try {
-                            const res = await fetch('/api/ventures/save', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ ...tripData, profile })
-                            });
-                            if (res.ok && btn) {
-                              setSaveStatus("saved");
-                              btn.innerText = 'Venture Saved! ✨';
-                              btn.className = btn.className.replace('bg-[#1488fc]', 'bg-emerald-600');
-                            }
-                          } catch {
-                            setSaveStatus("error");
-                            if (btn) {
-                              btn.innerText = 'Save Error';
-                              btn.disabled = false;
-                            }
-                          }
-                        }} 
-                        className="w-full mt-4 py-3 rounded-xl bg-[#1488fc] hover:bg-[#1a94ff] text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                        onClick={saveCurrentTrip}
+                        className={`w-full mt-4 py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 ${
+                          saveStatus === "saved"
+                            ? "bg-emerald-600 shadow-emerald-500/20"
+                            : saveStatus === "error"
+                              ? "bg-red-600 hover:bg-red-500 shadow-red-500/20"
+                              : "bg-[#1488fc] hover:bg-[#1a94ff] shadow-blue-500/20"
+                        }`}
                       >
-                        Save Venture
+                        {saveStatus === "saving"
+                          ? "Archiving..."
+                          : saveStatus === "saved"
+                            ? "Venture Saved"
+                            : saveStatus === "error"
+                              ? "Save Error"
+                              : "Save Venture"}
                       </button>
                     ) : (
                       <SignInButton mode="modal">
@@ -797,8 +780,7 @@ export default function PlannerPage() {
                       <div className="flex gap-2">
                         <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full flex items-center gap-1.5 uppercase tracking-widest">
                           <CloudSun className="h-3 w-3" />
-                          {/* Replaced WeatherBadge */}
-<WeatherBadge tripData={tripData} day={currentDayPlan} />
+                          <WeatherBadge tripData={tripData} day={currentDayPlan} />
                         </span>
                         <span className="text-[10px] font-bold px-3 py-1.5 bg-blue-500/10 text-blue-200 border border-blue-500/20 rounded-full flex items-center gap-1.5 uppercase tracking-widest">
                           <CalendarDays className="h-3 w-3" />

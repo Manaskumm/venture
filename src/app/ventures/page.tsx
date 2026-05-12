@@ -48,7 +48,7 @@ function inferCurrency(venture: VentureSummary) {
     text.includes("india") ||
     text.includes("inr") ||
     text.includes("rupee") ||
-    text.includes("₹")
+    text.includes("\u20b9")
   ) {
     return { symbol: "\u20b9", code: "INR" };
   }

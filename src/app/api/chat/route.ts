@@ -1,4 +1,9 @@
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
+import {
+  GoogleGenerativeAI,
+  SchemaType,
+  type Part,
+  type Tool,
+} from "@google/generative-ai";
 import { NextResponse } from "next/server";
 import Groq from "groq-sdk";
 
@@ -20,8 +25,94 @@ type TravelerProfileInput = {
   autonomyLevel?: string;
 };
 
+type FlightSearchArgs = {
+  origin: string;
+  destination: string;
+  date: string;
+  adults: number;
+  travel_class?: string;
+  currency?: string;
+};
+
+type HotelSearchArgs = {
+  location: string;
+  check_in_date: string;
+  check_out_date: string;
+  adults: number;
+  currency?: string;
+};
+
+type SerpFlightLeg = {
+  airline?: string;
+  flight_number?: string;
+  departure_airport?: { id?: string };
+  arrival_airport?: { id?: string };
+};
+
+type SerpFlightOption = {
+  flights?: SerpFlightLeg[];
+  price?: number | string;
+  total_duration?: number | string;
+};
+
+type SerpFlightsResponse = {
+  best_flights?: SerpFlightOption[];
+  search_metadata?: { google_flights_url?: string };
+};
+
+type SerpHotelProperty = {
+  name?: string;
+  total_rate?: { lowest?: number | string };
+  rate_per_night?: { lowest?: number | string };
+  hotel_class?: string;
+  overall_rating?: number | string;
+  reviews?: number | string;
+  amenities?: string[];
+  link?: string;
+};
+
+type SerpHotelsResponse = {
+  properties?: SerpHotelProperty[];
+};
+
+function asRecord(value: object): Record<string, unknown> {
+  return value as Record<string, unknown>;
+}
+
+function stringFrom(value: unknown, fallback = "") {
+  return typeof value === "string" ? value : fallback;
+}
+
+function numberFrom(value: unknown, fallback = 1) {
+  return typeof value === "number" ? value : Number(value) || fallback;
+}
+
+function toFlightSearchArgs(args: object): FlightSearchArgs {
+  const record = asRecord(args);
+  return {
+    origin: stringFrom(record.origin),
+    destination: stringFrom(record.destination),
+    date: stringFrom(record.date),
+    adults: numberFrom(record.adults),
+    travel_class: stringFrom(record.travel_class, "Economy"),
+    currency: stringFrom(record.currency, "USD"),
+  };
+}
+
+function toHotelSearchArgs(args: object): HotelSearchArgs {
+  const record = asRecord(args);
+  return {
+    location: stringFrom(record.location),
+    check_in_date: stringFrom(record.check_in_date),
+    check_out_date: stringFrom(record.check_out_date),
+    adults: numberFrom(record.adults),
+    currency: stringFrom(record.currency, "USD"),
+  };
+}
+
 // Helper function to fetch real flights via SerpApi (Google Flights)
-async function searchLiveFlights(args: any) {
+async function searchLiveFlights(rawArgs: object) {
+  const args = toFlightSearchArgs(rawArgs);
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) {
     return {
@@ -35,24 +126,27 @@ async function searchLiveFlights(args: any) {
     "Business": 3,
     "First": 4
   };
-  const travelClass = classMap[args.travel_class] || 1;
+  const travelClass = classMap[args.travel_class || "Economy"] || 1;
 
   try {
     const url = `https://serpapi.com/search.json?engine=google_flights&departure_id=${args.origin}&arrival_id=${args.destination}&outbound_date=${args.date}&type=2&adults=${args.adults}&travel_class=${travelClass}&currency=${args.currency || "USD"}&api_key=${apiKey}`;
     const res = await fetch(url);
-    const data = await res.json();
+    const data = (await res.json()) as SerpFlightsResponse;
 
     if (data.best_flights && data.best_flights.length > 0) {
       const flights = data.best_flights;
       const optimal = flights[0];
-      const flightLeg = optimal.flights[0];
+      const flightLeg = optimal.flights?.[0];
+      if (!flightLeg) {
+        return { error: "No flight leg details found for this route and date." };
+      }
       return {
         status: "success",
         optimal_flight: {
           airline: flightLeg.airline,
           flight_number: flightLeg.flight_number,
-          departure_airport: flightLeg.departure_airport.id,
-          arrival_airport: flightLeg.arrival_airport.id,
+          departure_airport: flightLeg.departure_airport?.id || args.origin,
+          arrival_airport: flightLeg.arrival_airport?.id || args.destination,
           total_price: optimal.price,
           currency: args.currency || "USD",
           travelers: args.adults,
@@ -63,13 +157,15 @@ async function searchLiveFlights(args: any) {
       };
     }
     return { error: "No flights found for this route and date." };
-  } catch (error: any) {
-    return { error: "Failed to fetch from live flight API. " + error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { error: "Failed to fetch from live flight API. " + message };
   }
 }
 
 // Helper function to fetch real hotels via SerpApi (Google Hotels)
-async function searchLiveHotels(args: any) {
+async function searchLiveHotels(rawArgs: object) {
+  const args = toHotelSearchArgs(rawArgs);
   const apiKey = process.env.SERPAPI_KEY;
   if (!apiKey) {
     return { error: "SERPAPI_KEY is missing." };
@@ -78,7 +174,7 @@ async function searchLiveHotels(args: any) {
   try {
     const url = `https://serpapi.com/search.json?engine=google_hotels&q=${encodeURIComponent(args.location)}&check_in_date=${args.check_in_date}&check_out_date=${args.check_out_date}&adults=${args.adults}&currency=${args.currency || "USD"}&api_key=${apiKey}`;
     const res = await fetch(url);
-    const data = await res.json();
+    const data = (await res.json()) as SerpHotelsResponse;
 
     if (data.properties && data.properties.length > 0) {
       const optimal = data.properties[0];
@@ -97,8 +193,9 @@ async function searchLiveHotels(args: any) {
       };
     }
     return { error: "No hotels found for this location and dates." };
-  } catch (error: any) {
-    return { error: "Failed to fetch from live hotel API. " + error.message };
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return { error: "Failed to fetch from live hotel API. " + message };
   }
 }
 
@@ -169,7 +266,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Gemini API key is missing." }, { status: 500 });
     }
 
-    const tools: any = [
+    const tools: Tool[] = [
       {
         functionDeclarations: [
           {
@@ -208,7 +305,7 @@ export async function POST(req: Request) {
     ];
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash", // Using 1.5 Flash for stable production quota
+      model: "gemini-2.5-flash",
       tools,
     });
 
@@ -229,6 +326,10 @@ export async function POST(req: Request) {
     Build a complete day-by-day plan.
     1. Call 'find_optimal_flights' and 'find_optimal_hotel' for real data.
     2. Respond with a natural language summary followed by a STRICT VALID JSON block.
+    3. Treat explicitly named sights, landmarks, restaurants, museums, venues, neighborhoods, parks, beaches, hikes, or photo locations in the user prompt as required itinerary anchors. Include each named place as an activity unless impossible, and explain any impossible fit in the summary.
+    4. Apply accessibility and mobility needs as hard constraints. Prefer step-free hotels, accessible rooms, elevator-friendly transit, accessible transfers, shorter walking segments, and restaurants/attractions that fit the stated needs.
+    5. Use the traveler-requested currency and preserve currencySymbol/currencyCode consistently across all cost fields.
+    6. Include exact itinerary dates and day-specific weather estimates. Use Fahrenheit for Fahrenheit/imperial destinations and Celsius for metric destinations.
     
     ## JSON STRUCTURE
     {
@@ -271,7 +372,7 @@ export async function POST(req: Request) {
     while (response.functionCalls && response.functionCalls() && callDepth < 5) {
       callDepth++;
       const calls = response.functionCalls() || [];
-      const functionResponses = [];
+      const functionResponses: Part[] = [];
       for (const call of calls) {
         if (call.name === "find_optimal_flights") {
           const flightData = await searchLiveFlights(call.args);
@@ -287,9 +388,9 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ reply: response.text() });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("AI Route Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Failed to generate response";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
-

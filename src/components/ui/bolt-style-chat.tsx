@@ -46,17 +46,17 @@ const paceOptions = ["Relaxed", "Balanced", "Packed"];
 
 const ventureWords = [
   "venture",
-  "رحلة", // Arabic
-  "旅する", // Japanese
-  "ταξίδι", // Greek
+  "\u0631\u062d\u0644\u0629", // Arabic
+  "\u65c5\u3059\u308b", // Japanese
+  "\u03c4\u03b1\u03be\u03af\u03b4\u03b9", // Greek
   "venture",
-  "பயணம்", // Tamil
-  "यात्रा", // Hindi
-  "旅行", // Chinese
+  "\u0baa\u0bcb", // Tamil
+  "\u092f\u093e\u0924\u094d\u0930\u093e", // Hindi
+  "\u65c5\u884c", // Chinese
   "venture",
-  "여행", // Korean
-  "поездка", // Russian
-  "เดินทาง", // Thai
+  "\uc5ec\ud589", // Korean
+  "\u043f\u043e\u0435\u0437\u0434\u043a\u0430", // Russian
+  "\u0e44\u0e1b", // Thai
 ];
 
 const exampleTrips: ExampleTrip[] = [

@@ -38,12 +38,6 @@ export interface TripData {
   currencyCode?: string;
 }
 
-export interface Message {
-  id: string;
-  content: string;
-  sender: "me" | "other";
-}
-
 export interface TravelerProfile {
   name: string;
   nationality: string;
@@ -51,35 +45,17 @@ export interface TravelerProfile {
   seatPreference: "window" | "aisle" | "extra-legroom";
   mealPreference: "none" | "vegetarian" | "vegan" | "gluten-free";
   accessibilityNeeds: string;
-  loyaltyPrograms: { [key: string]: string };
   budgetTier: "budget" | "boutique" | "luxury";
   autonomyLevel: "manual" | "hybrid" | "autonomous";
-}
-
-export interface VentureNotification {
-  id: string;
-  type: "delay" | "weather" | "safety" | "price";
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
 }
 
 interface TripContextType {
   tripData: TripData;
   setTripData: (data: TripData) => void;
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
   mapFocusQuery: string | null;
   setMapFocusQuery: (query: string | null) => void;
-  initialMessage: string | null;
-  setInitialMessage: (msg: string | null) => void;
-  messages: Message[];
-  setMessages: (messages: Message[] | ((prev: Message[]) => Message[])) => void;
   profile: TravelerProfile;
   setProfile: (profile: TravelerProfile) => void;
-  notifications: VentureNotification[];
-  setNotifications: (notifs: VentureNotification[]) => void;
 }
 
 const defaultProfile: TravelerProfile = {
@@ -89,7 +65,6 @@ const defaultProfile: TravelerProfile = {
   seatPreference: "window",
   mealPreference: "none",
   accessibilityNeeds: "",
-  loyaltyPrograms: {},
   budgetTier: "boutique",
   autonomyLevel: "hybrid",
 };
@@ -106,29 +81,17 @@ const TripContext = createContext<TripContextType | undefined>(undefined);
 
 export function TripProvider({ children }: { children: ReactNode }) {
   const [tripData, setTripData] = useState<TripData>(defaultTripData);
-  const [isLoading, setIsLoading] = useState(false);
   const [mapFocusQuery, setMapFocusQuery] = useState<string | null>(null);
-  const [initialMessage, setInitialMessage] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [profile, setProfile] = useState<TravelerProfile>(defaultProfile);
-  const [notifications, setNotifications] = useState<VentureNotification[]>([]);
 
   return (
     <TripContext.Provider value={{ 
       tripData, 
       setTripData, 
-      isLoading, 
-      setIsLoading,
       mapFocusQuery,
       setMapFocusQuery,
-      initialMessage,
-      setInitialMessage,
-      messages,
-      setMessages,
       profile,
       setProfile,
-      notifications,
-      setNotifications
     }}>
       {children}
     </TripContext.Provider>
