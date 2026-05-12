@@ -344,7 +344,44 @@ export default function PlannerPage() {
   const googleFlightsSearchUrl = (query: string) =>
     `https://www.google.com/travel/flights/search?q=${encodeURIComponent(query)}`;
 
+  const shouldBuildItinerary = (message: string) => {
+    const text = message.toLowerCase();
+    const hasExplicitGo =
+      text.includes("plan it") ||
+      text.includes("generate itinerary") ||
+      text.includes("build my trip") ||
+      text.includes("ready to plan") ||
+      text.includes("show me the plan") ||
+      text.includes("make the itinerary") ||
+      text.includes("create the itinerary");
+
+    if (hasExplicitGo && chatHistory.length > 0) return true;
+
+    const hasLabeledBasics = text.includes("trip basics:");
+    const hasDestination = /destination:\s*\S+/.test(text);
+    const hasTiming =
+      /dates or duration:\s*\S+/.test(text) ||
+      /\b(\d+)\s*(day|days|week|weeks)\b/.test(text) ||
+      /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(text);
+    const hasTravelers =
+      /travelers:\s*\S+/.test(text) ||
+      /\b(\d+)\s*(adult|adults|kid|kids|child|children|traveler|travelers|people|person|persons)\b/.test(text);
+    const hasBudget =
+      /budget:\s*\S+/.test(text) ||
+      /(\$|usd|eur|gbp|inr|aed|cad|aud|yen|rupees|dollars|euros|pounds)/.test(text);
+    const hasFreeformDestination =
+      /\b(to|in|through|around)\s+[a-z][a-z\s,.-]{2,}/.test(text);
+
+    if (hasLabeledBasics) {
+      return hasDestination && hasTiming && hasTravelers;
+    }
+
+    return /^plan\b/.test(text) && hasFreeformDestination && hasTiming && hasTravelers && hasBudget;
+  };
+
   const generatePlan = async (message: string) => {
+    const shouldPlan = shouldBuildItinerary(message);
+
     setIsStarted(true);
     setActiveLayer("chat");
     setIsGenerating(true);
@@ -360,6 +397,7 @@ export default function PlannerPage() {
           message,
           history: chatHistory.map(m => ({ content: m.content, sender: m.role === 'user' ? 'me' : 'other' })),
           profile,
+          mode: shouldPlan ? "plan" : "discover",
         }),
       });
 

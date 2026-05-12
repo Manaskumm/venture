@@ -25,6 +25,8 @@ type TravelerProfileInput = {
   autonomyLevel?: string;
 };
 
+type ChatMode = "auto" | "discover" | "plan";
+
 type FlightSearchArgs = {
   origin: string;
   destination: string;
@@ -205,17 +207,18 @@ export async function POST(req: Request) {
       message,
       history = [],
       profile = {},
+      mode = "auto",
     }: {
       message?: string;
       history?: ChatHistoryMessage[];
       profile?: TravelerProfileInput;
+      mode?: ChatMode;
     } = await req.json();
 
     if (!message) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    const hasGroqKey = Boolean(process.env.GROQ_API_KEY);
     const lowerMessage = message.toLowerCase();
     
     // Simple intent detection: if the user explicitly asks to "plan", "generate", or "build" the itinerary, use Gemini.
@@ -228,36 +231,64 @@ export async function POST(req: Request) {
       lowerMessage.includes("show me the plan") ||
       (lowerMessage.includes("itinerary") && (lowerMessage.includes("show") || lowerMessage.includes("create") || lowerMessage.includes("generate")));
 
-    if (hasGroqKey && !isPlanningRequest) {
-      // PHASE 1: DISCOVERY (using Groq for ultra-low latency)
-      const groqHistory = history.map(msg => ({
-        role: msg.sender === "me" ? "user" as const : "assistant" as const,
-        content: msg.content
-      }));
+    const shouldDiscover = mode === "discover" || (mode === "auto" && !isPlanningRequest);
 
-      const groqResponse = await groq.chat.completions.create({
-        messages: [
-          {
-            role: "system",
-            content: `You are VENTURE, an elite AI travel architect in the DISCOVERY phase.
-            Your goal is to gather trip details: destination, dates, budget, origin city, pace, travelers, and style.
-            
-            TRAVELER PROFILE:
-            - NAME: ${profile.name || "Guest"}
-            - NATIONALITY: ${profile.nationality || "Not specified"}
-            
-            Be concise, premium, and sophisticated. Ask one or two focused questions to fill the gaps.
-            DO NOT generate a JSON itinerary. Just chat.
-            If the user asks you to "plan it" or seems ready, tell them you are initializing the trip operations architect.`
-          },
-          ...groqHistory,
-          { role: "user", content: message }
+    if (shouldDiscover) {
+      // PHASE 1: DISCOVERY (using Groq for ultra-low latency)
+      const discoveryPrompt = `You are VENTURE, an elite AI travel architect in the DISCOVERY phase.
+Your only goal is to gather missing trip details before an itinerary is built.
+
+TRAVELER PROFILE:
+- NAME: ${profile.name || "Guest"}
+- NATIONALITY: ${profile.nationality || "Not specified"}
+- ACCESSIBILITY: ${profile.accessibilityNeeds || "Not specified"}
+- DIETARY: ${profile.mealPreference || "None"}
+
+Ask one or two focused questions only when details are missing.
+Prioritize destination, origin, dates or duration, travelers, budget/currency, pace, must-see places, accessibility, and flight needs.
+If the request already has enough detail, reply with a short confirmation and ask the user to confirm that you should build the itinerary.
+Never create a day-by-day itinerary, schedule, budget table, flight list, hotel list, JSON, markdown JSON, or code block in this phase.`;
+
+      if (process.env.GROQ_API_KEY) {
+        const groqHistory = history.map(msg => ({
+          role: msg.sender === "me" ? "user" as const : "assistant" as const,
+          content: msg.content
+        }));
+
+        const groqResponse = await groq.chat.completions.create({
+          messages: [
+            { role: "system", content: discoveryPrompt },
+            ...groqHistory,
+            { role: "user", content: message }
+          ],
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.7,
+        });
+
+        const reply = groqResponse.choices[0]?.message?.content || "";
+        return NextResponse.json({ reply });
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+        return NextResponse.json({ error: "Gemini API key is missing." }, { status: 500 });
+      }
+
+      const discoveryModel = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+      });
+      const discoveryChat = discoveryModel.startChat({
+        history: [
+          { role: "user", parts: [{ text: discoveryPrompt }] },
+          { role: "model", parts: [{ text: "Understood. I will only ask focused discovery questions and will not generate an itinerary." }] },
+          ...history.map((msg) => ({
+            role: msg.sender === "me" ? "user" : "model",
+            parts: [{ text: msg.content }],
+          })),
         ],
-        model: "llama-3.3-70b-versatile",
-        temperature: 0.7,
       });
 
-      const reply = groqResponse.choices[0]?.message?.content || "";
+      const result = await discoveryChat.sendMessage(message);
+      const reply = (await result.response).text();
       return NextResponse.json({ reply });
     }
 
