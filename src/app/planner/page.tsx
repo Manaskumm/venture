@@ -396,6 +396,11 @@ export default function PlannerPage() {
 
   const generatePlan = async (message: string) => {
     const shouldPlan = shouldBuildItinerary(message);
+    const isFirstMessage = chatHistory.length === 0;
+
+    if (!isFirstMessage) {
+      setChatHistory(prev => [...prev, { role: "user", content: message }]);
+    }
 
     setIsStarted(true);
     setActiveLayer("chat");
@@ -426,11 +431,19 @@ export default function PlannerPage() {
       const parsedTrip = extractTripData(reply);
       
       if (!parsedTrip) {
-        setChatHistory(prev => [
-          ...prev,
-          { role: "user", content: message },
-          { role: "venture", content: reply }
-        ]);
+        setChatHistory(prev => {
+          if (isFirstMessage) {
+            return [
+              { role: "user", content: message },
+              { role: "venture", content: reply }
+            ];
+          } else {
+            return [
+              ...prev,
+              { role: "venture", content: reply }
+            ];
+          }
+        });
         return;
       }
 
@@ -645,7 +658,7 @@ export default function PlannerPage() {
             exit={{ opacity: 0, scale: 0.95 }}
             className="flex-1 flex flex-col items-center relative overflow-hidden z-10"
           >
-            {isGenerating ? (
+            {isGenerating && chatHistory.length === 0 ? (
               <AILoader text="Planning" />
             ) : generationError ? (
               <div className="flex min-h-screen w-full flex-col items-center justify-center px-6 text-center">
@@ -679,14 +692,28 @@ export default function PlannerPage() {
                         </div>
                       </motion.div>
                     ))}
+                    {isGenerating && chatHistory.length > 0 && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex justify-start"
+                      >
+                        <div className="max-w-[85%] p-5 rounded-3xl bg-[#1e1e22]/90 backdrop-blur-md border border-white/10 text-zinc-200 shadow-xl flex items-center gap-3">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-300" />
+                          <p className="text-[13px] leading-relaxed text-zinc-400 italic">Venture is thinking...</p>
+                        </div>
+                      </motion.div>
+                    )}
                  </div>
                   <div className="mt-4 w-full flex gap-3 rounded-3xl border border-white/10 bg-[#1e1e22]/80 backdrop-blur-md p-2 shadow-2xl">
                     <textarea
                       placeholder="Reply to Venture..."
-                      className="min-h-[60px] flex-1 resize-none bg-transparent px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/30"
+                      disabled={isGenerating}
+                      className="min-h-[60px] flex-1 resize-none bg-transparent px-4 py-3 text-sm leading-6 text-white outline-none placeholder:text-white/30 disabled:opacity-50"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                           e.preventDefault();
+                          if (isGenerating) return;
                           const val = e.currentTarget.value.trim();
                           if (val) {
                             generatePlan(val);
@@ -696,6 +723,7 @@ export default function PlannerPage() {
                       }}
                     />
                     <button
+                      disabled={isGenerating}
                       onClick={(e) => {
                         const textarea = e.currentTarget.previousElementSibling as HTMLTextAreaElement;
                         const val = textarea.value.trim();
@@ -704,7 +732,7 @@ export default function PlannerPage() {
                           textarea.value = '';
                         }
                       }}
-                      className="self-end rounded-2xl bg-[#1488fc] p-4 text-white shadow-lg shadow-blue-500/30 transition hover:bg-[#1a94ff]"
+                      className="self-end rounded-2xl bg-[#1488fc] p-4 text-white shadow-lg shadow-blue-500/30 transition hover:bg-[#1a94ff] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <SendHorizontal className="h-5 w-5" />
                     </button>
