@@ -551,6 +551,7 @@ export default function PlannerPage() {
     if (saveStatus === "saving" || saveStatus === "saved") return;
 
     setSaveStatus("saving");
+    setGenerationError(null);
     try {
       const res = await fetch("/api/ventures/save", {
         method: "POST",
@@ -560,7 +561,7 @@ export default function PlannerPage() {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        alert(`Save Error: ${errorData.error || res.statusText}`);
+        setGenerationError(`Save Error: ${errorData.error || res.statusText}`);
         setSaveStatus("error");
         return;
       }
@@ -568,7 +569,7 @@ export default function PlannerPage() {
       setSaveStatus("saved");
     } catch (e: any) {
       console.error(e);
-      alert(`Save Error: ${e.message || "Unknown error"}`);
+      setGenerationError(`Save Error: ${e.message || "Unknown error"}`);
       setSaveStatus("error");
     }
   };
@@ -854,25 +855,32 @@ export default function PlannerPage() {
                     <p className="text-2xl font-bold text-white">{tripData.currencySymbol || '$'}{tripData.totalEstimatedCost.toLocaleString()}</p>
                     
                     {isSignedIn ? (
-                      <button
-                        disabled={saveStatus === "saving" || saveStatus === "saved"}
-                        onClick={saveCurrentTrip}
-                        className={`w-full mt-4 py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 ${
-                          saveStatus === "saved"
-                            ? "bg-emerald-600 shadow-emerald-500/20"
-                            : saveStatus === "error"
-                              ? "bg-red-600 hover:bg-red-500 shadow-red-500/20"
-                              : "bg-[#1488fc] hover:bg-[#1a94ff] shadow-blue-500/20"
-                        }`}
-                      >
-                        {saveStatus === "saving"
-                          ? "Archiving..."
-                          : saveStatus === "saved"
-                            ? "Venture Saved"
-                            : saveStatus === "error"
-                              ? "Save Error"
-                              : "Save Venture"}
-                      </button>
+                      <>
+                        <button
+                          disabled={saveStatus === "saving" || saveStatus === "saved"}
+                          onClick={saveCurrentTrip}
+                          className={`w-full mt-4 py-3 rounded-xl text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg disabled:opacity-50 ${
+                            saveStatus === "saved"
+                              ? "bg-emerald-600 shadow-emerald-500/20"
+                              : saveStatus === "error"
+                                ? "bg-red-600 hover:bg-red-500 shadow-red-500/20"
+                                : "bg-[#1488fc] hover:bg-[#1a94ff] shadow-blue-500/20"
+                          }`}
+                        >
+                          {saveStatus === "saving"
+                            ? "Archiving..."
+                            : saveStatus === "saved"
+                              ? "Venture Saved"
+                              : saveStatus === "error"
+                                ? "Save Error"
+                                : "Save Venture"}
+                        </button>
+                        {saveStatus === "error" && generationError && (
+                          <p className="mt-2 text-[10px] font-medium text-red-400 text-center bg-red-500/10 p-2 rounded-lg break-words">
+                            {generationError}
+                          </p>
+                        )}
+                      </>
                     ) : (
                       <SignInButton mode="modal">
                         <button className="w-full mt-4 py-3 rounded-xl bg-[#1488fc] hover:bg-[#1a94ff] text-white text-[10px] font-bold uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20">Save Venture</button>
