@@ -873,9 +873,9 @@ export default function PlannerPage() {
                 </div>
 
                 {/* Main Content (Map + Schedule) */}
-                <div className="flex-1 flex flex-col h-full bg-[#0f0f0f]/40 backdrop-blur-sm">
-                  <div className="min-h-44 border-b border-white/5 bg-[#0f0f0f]/80 backdrop-blur-3xl flex flex-col justify-center px-10 py-5 shadow-sm overflow-x-auto scrollbar-hide">
-                    <div className="flex justify-between items-end mb-4">
+                <div className="flex-1 flex flex-col h-full bg-[#0f0f0f]/40 backdrop-blur-sm overflow-hidden">
+                  <div className="min-h-44 border-b border-white/5 bg-[#0f0f0f]/80 backdrop-blur-3xl flex flex-col justify-center px-10 py-5 shadow-sm">
+                    <div className="flex flex-wrap justify-between items-end gap-4 mb-4">
                       <div>
                         <h2 className="text-xs font-bold text-[#1488fc] uppercase tracking-[0.3em] mb-1">Adventure to</h2>
                         <h3 className="text-5xl font-serif italic tracking-wide">{tripData.destination}</h3>
@@ -892,7 +892,7 @@ export default function PlannerPage() {
                         <span className="text-[10px] font-bold px-3 py-1.5 bg-white/5 border border-white/10 rounded-full tracking-widest uppercase">{tripData.duration} DAYS</span>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3 min-w-[680px]">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
                       {tripStats.map((stat) => (
                         <div key={stat.label} className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2">
                           <stat.icon className="w-4 h-4 text-blue-400" />
@@ -906,14 +906,14 @@ export default function PlannerPage() {
                         <span className="ml-auto text-xs font-black text-white">{tripData.currencySymbol || '$'}{averageDailyCost.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="relative -mx-2 overflow-x-auto px-2 pb-2 scrollbar-hide">
+                    <div className="relative -mx-2 overflow-x-auto px-2 pb-4 scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
                       <TimelineRail
                         items={timelineItems}
                         labelAngle={0}
                         size="md"
                         gapClassName="gap-0"
                         className="min-w-max overflow-visible px-0"
-                        railClassName="left-6 right-6"
+                        railClassName="left-16 right-16"
                         itemClassName="w-32 shrink-0"
                         labelClassName="max-w-28 overflow-hidden text-ellipsis text-center text-[11px]"
                         captionClassName="text-[11px]"

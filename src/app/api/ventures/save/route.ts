@@ -14,21 +14,20 @@ export async function POST(req: Request) {
     const venture = await prisma.venture.create({
       data: {
         userId,
-        destination: tripData.destination,
-        duration: parseInt(tripData.duration) || 1,
-        totalEstimatedCost: tripData.totalEstimatedCost,
-        currencySymbol: tripData.currencySymbol,
-        currencyCode: tripData.currencyCode,
-        mapQuery: tripData.mapQuery,
-        weatherSummary: tripData.weatherSummary,
-        itinerary: tripData.itinerary,
+        destination: tripData.destination || "Unknown Destination",
+        duration: parseInt(String(tripData.duration)) || 1,
+        totalEstimatedCost: Math.round(Number(tripData.totalEstimatedCost)) || 0,
+        currencySymbol: tripData.currencySymbol || null,
+        currencyCode: tripData.currencyCode || null,
+        mapQuery: tripData.mapQuery || null,
+        weatherSummary: tripData.weatherSummary || null,
+        itinerary: tripData.itinerary || [],
       },
     });
 
     return NextResponse.json({ success: true, id: venture.id });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Save Error:", error);
-    const message = error instanceof Error ? error.message : "Unable to save venture";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: error?.message || "Unable to save venture" }, { status: 500 });
   }
 }
