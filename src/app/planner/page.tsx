@@ -360,7 +360,7 @@ export default function PlannerPage() {
     `https://www.google.com/travel/flights/search?q=${encodeURIComponent(query)}`;
 
   const shouldBuildItinerary = (message: string) => {
-    const text = message.toLowerCase();
+    const text = message.toLowerCase().trim();
     const hasExplicitGo =
       text.includes("plan it") ||
       text.includes("generate itinerary") ||
@@ -370,7 +370,25 @@ export default function PlannerPage() {
       text.includes("make the itinerary") ||
       text.includes("create the itinerary");
 
-    if (hasExplicitGo && chatHistory.length > 0) return true;
+    const isConfirmation =
+      text === "confirm" ||
+      text === "yes" ||
+      text === "yeah" ||
+      text === "yep" ||
+      text === "sure" ||
+      text === "ok" ||
+      text === "okay" ||
+      text.includes("yes i am ready") ||
+      text.includes("yes, i am ready") ||
+      text.includes("sounds good") ||
+      text.includes("looks good") ||
+      text.includes("let's do it") ||
+      text.includes("let's go") ||
+      text.includes("proceed") ||
+      text.includes("build it") ||
+      text.includes("go ahead");
+
+    if ((hasExplicitGo || isConfirmation) && chatHistory.length > 0) return true;
 
     const hasLabeledBasics = text.includes("trip basics:");
     const hasDestination = /destination:\s*\S+/.test(text);
@@ -397,9 +415,12 @@ export default function PlannerPage() {
   const generatePlan = async (message: string) => {
     const shouldPlan = shouldBuildItinerary(message);
     const isFirstMessage = chatHistory.length === 0;
+    const historyBackup = [...chatHistory];
 
-    if (!isFirstMessage) {
+    if (!isFirstMessage && !shouldPlan) {
       setChatHistory(prev => [...prev, { role: "user", content: message }]);
+    } else if (shouldPlan) {
+      setChatHistory([]);
     }
 
     setIsStarted(true);
@@ -453,6 +474,7 @@ export default function PlannerPage() {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to generate this trip.";
       setGenerationError(message);
+      if (shouldPlan) setChatHistory(historyBackup);
     } finally {
       setIsGenerating(false);
     }
