@@ -14,13 +14,13 @@ export async function POST(req: Request) {
     const venture = await prisma.venture.create({
       data: {
         userId,
-        destination: tripData.destination || "Unknown Destination",
-        duration: parseInt(String(tripData.duration)) || 1,
-        totalEstimatedCost: Math.round(Number(tripData.totalEstimatedCost)) || 0,
-        currencySymbol: tripData.currencySymbol || null,
-        currencyCode: tripData.currencyCode || null,
-        mapQuery: tripData.mapQuery || null,
-        weatherSummary: tripData.weatherSummary || null,
+        destination: String(tripData.destination || "Unknown Destination"),
+        duration: parseInt(String(tripData.duration).replace(/[^\d.-]/g, '')) || 1,
+        totalEstimatedCost: Math.round(Number(String(tripData.totalEstimatedCost).replace(/[^\d.-]/g, ''))) || 0,
+        currencySymbol: tripData.currencySymbol ? String(tripData.currencySymbol) : null,
+        currencyCode: tripData.currencyCode ? String(tripData.currencyCode) : null,
+        mapQuery: tripData.mapQuery ? String(tripData.mapQuery) : null,
+        weatherSummary: tripData.weatherSummary ? String(tripData.weatherSummary) : null,
         itinerary: tripData.itinerary || [],
       },
     });

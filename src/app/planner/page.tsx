@@ -558,8 +558,17 @@ export default function PlannerPage() {
         body: JSON.stringify({ ...tripData, profile }),
       });
 
-      setSaveStatus(res.ok ? "saved" : "error");
-    } catch {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        alert(`Save Error: ${errorData.error || res.statusText}`);
+        setSaveStatus("error");
+        return;
+      }
+
+      setSaveStatus("saved");
+    } catch (e: any) {
+      console.error(e);
+      alert(`Save Error: ${e.message || "Unknown error"}`);
       setSaveStatus("error");
     }
   };
