@@ -244,8 +244,9 @@ TRAVELER PROFILE:
 - ACCESSIBILITY: ${profile.accessibilityNeeds || "Not specified"}
 - DIETARY: ${profile.mealPreference || "None"}
 
+CRITICAL RULE: You MUST know the user's origin (where they are traveling from) to plan flights. If the user has not provided their origin city or airport, you MUST ask for it.
 Ask one or two focused questions only when details are missing.
-Prioritize destination, origin, dates or duration, travelers, budget/currency, pace, must-see places, accessibility, and flight needs.
+Prioritize origin (crucial for flights), destination, dates or duration, travelers, budget/currency, pace, must-see places, accessibility, and flight needs.
 If the request already has enough detail, reply with a short confirmation and ask the user to confirm that you should build the itinerary.
 Never create a day-by-day itinerary, schedule, budget table, flight list, hotel list, JSON, markdown JSON, or code block in this phase.`;
 
