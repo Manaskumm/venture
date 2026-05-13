@@ -247,201 +247,6 @@ function StarRating({ rating }: { rating: number }) {
         />
       </svg>
     );
-    <label className="space-y-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#8a8a8f]">
-        {label}
-      </span>
-      <input
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="h-12 w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-blue-400/70 focus:bg-white/[0.08]"
-      />
-    </label>
-  );
-}
-
-function SettingsSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="space-y-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#8a8a8f]">
-        {label}
-      </span>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-12 w-full rounded-2xl border border-white/10 bg-[#292930] px-4 text-sm text-white outline-none transition focus:border-blue-400/70"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-function SettingsTextArea({
-  label,
-  value,
-  placeholder,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  placeholder: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="space-y-2">
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#8a8a8f]">
-        {label}
-      </span>
-      <textarea
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-white/25 focus:border-blue-400/70 focus:bg-white/[0.08]"
-      />
-    </label>
-  );
-}
-
-function parseLocalDate(dateText: string) {
-  const match = dateText.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) {
-    return new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3])
-    );
-  }
-
-  const parsed = new Date(dateText);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function addDays(date: Date, days: number) {
-  const next = new Date(date);
-  next.setDate(next.getDate() + days);
-  return next;
-}
-
-function formatMonthDay(date: Date) {
-  return `${date.getMonth() + 1}/${date.getDate()}`;
-}
-
-function inferStartDate(tripData: TripData) {
-  if (tripData.startDate) {
-    const parsed = parseLocalDate(tripData.startDate);
-    if (parsed) return parsed;
-  }
-
-  const firstDatedDay = tripData.itinerary.find((day) => day.date);
-  if (firstDatedDay?.date) {
-    const parsed = parseLocalDate(firstDatedDay.date);
-    if (parsed) return parsed;
-  }
-
-  return new Date();
-}
-
-function getDayDate(tripData: TripData, dayNumber: number, dateText?: string) {
-  if (dateText) {
-    const parsed = parseLocalDate(dateText);
-    if (parsed) return parsed;
-  }
-
-  return addDays(inferStartDate(tripData), Math.max(dayNumber - 1, 0));
-}
-
-function usesImperialWeather(tripData: TripData) {
-  const placeText = `${tripData.destination} ${tripData.mapQuery} ${
-    tripData.currencyCode || ""
-  }`.toLowerCase();
-
-  return [
-    "united states",
-    "usa",
-    "u.s.",
-    "america",
-    "hawaii",
-    "alaska",
-    "puerto rico",
-    "guam",
-    "bahamas",
-    "belize",
-    "cayman",
-    "liberia",
-    "myanmar",
-  ].some((token) => placeText.includes(token));
-}
-
-
-function WeatherBadge({ tripData, day }: { tripData: TripData, day?: TripData["itinerary"][number] }) {
-  const weather = day?.weather;
-  if (!weather) return <>{tripData.weatherSummary || "Weather estimate pending"}</>;
-
-  const wantsImperial = usesImperialWeather(tripData);
-  const tempF = weather.temperatureF ?? (typeof weather.temperatureC === "number" ? Math.round((weather.temperatureC * 9) / 5 + 32) : undefined);
-  const tempC = weather.temperatureC ?? (typeof weather.temperatureF === "number" ? Math.round(((weather.temperatureF - 32) * 5) / 9) : undefined);
-
-  const primaryTemp = wantsImperial ? (typeof tempF === "number" ? `${tempF}°F` : "") : (typeof tempC === "number" ? `${tempC}°C` : "");
-  const altTemp = wantsImperial ? (typeof tempC === "number" ? `${tempC}°C` : "") : (typeof tempF === "number" ? `${tempF}°F` : "");
-
-  const rain = typeof weather.precipitationChance === "number" ? `${weather.precipitationChance}% rain` : "";
-  const baseText = [weather.summary, primaryTemp, rain].filter(Boolean).join(" · ");
-
-  return (
-    <span className="relative group cursor-help z-50">
-      {baseText}
-      {altTemp && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap shadow-xl border border-white/10">
-          {altTemp}
-        </span>
-      )}
-    </span>
-  );
-}
-
-function StarRating({ rating }: { rating: number }) {
-  const stars = [];
-  for (let i = 1; i <= 5; i++) {
-    let fillPct = "0%";
-    if (rating >= i) {
-      fillPct = "100%";
-    } else if (rating > i - 1) {
-      fillPct = `${Math.round((rating - (i - 1)) * 100)}%`;
-    }
-    
-    // We replace the dot with a dash to avoid invalid CSS IDs
-    const gradientId = `star-grad-${i}-${rating.toString().replace('.', '-')}`;
-    
-    stars.push(
-      <svg key={i} viewBox="0 0 24 24" className="w-3 h-3 drop-shadow-sm" style={{ minWidth: "12px" }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset={fillPct} stopColor="#fbbf24" />
-            <stop offset={fillPct} stopColor="#3f3f46" />
-          </linearGradient>
-        </defs>
-        <path
-          fill={`url(#${gradientId})`}
-          d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-        />
-      </svg>
-    );
   }
   return <div className="flex items-center gap-[2px] ml-2" title={`${rating} stars`}>{stars}</div>;
 }
@@ -1030,6 +835,315 @@ export default function PlannerPage() {
                           <CloudSun className="h-3 w-3" />
                           <WeatherBadge tripData={tripData} day={currentDayPlan} />
                         </span>
+                        <span className="text-[10px] font-bold px-3 py-1.5 bg-blue-500/10 text-blue-200 border border-blue-500/20 rounded-full flex items-center gap-1.5 uppercase tracking-widest">
+                          <CalendarDays className="h-3 w-3" />
+                          {formatMonthDay(currentDayDate)}
+                        </span>
+                        <span className="text-[10px] font-bold px-3 py-1.5 bg-white/5 border border-white/10 rounded-full tracking-widest uppercase">{tripData.duration} DAYS</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3 min-w-[680px]">
+                      {tripStats.map((stat) => (
+                        <div key={stat.label} className="flex items-center gap-2 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-2">
+                          <stat.icon className="w-4 h-4 text-blue-400" />
+                          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">{stat.label}</span>
+                          <span className="ml-auto text-xs font-black text-white">{stat.value}</span>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2">
+                        <CreditCard className="w-4 h-4 text-emerald-400" />
+                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-300">Daily avg</span>
+                        <span className="ml-auto text-xs font-black text-white">{tripData.currencySymbol || '$'}{averageDailyCost.toLocaleString()}</span>
+                      </div>
+                    </div>
+                    <div className="relative -mx-2 overflow-x-auto px-2 pb-2 scrollbar-hide">
+                      <TimelineRail
+                        items={timelineItems}
+                        labelAngle={0}
+                        size="md"
+                        gapClassName="gap-0"
+                        className="min-w-max overflow-visible px-0"
+                        railClassName="left-6 right-6"
+                        itemClassName="w-32 shrink-0"
+                        labelClassName="max-w-28 overflow-hidden text-ellipsis text-center text-[11px]"
+                        captionClassName="text-[11px]"
+                        contentStyle={{ minWidth: timelineMinWidth }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 flex flex-col lg:flex-row p-6 gap-6 overflow-hidden">
+                    <div className="w-full lg:w-[380px] flex flex-col gap-4 overflow-y-auto scrollbar-hide pr-2 pb-28">
+                      {!currentDayPlan ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center opacity-40">
+                          <Sparkles className="w-8 h-8 mb-4" />
+                          <p className="text-[10px] font-bold uppercase tracking-widest">Awaiting Intelligence</p>
+                          <p className="text-[9px] mt-1">Complete your discovery chat to build this view.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="mb-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <h4 className="text-[10px] font-bold flex items-center gap-3 text-[#5a5a5f] uppercase tracking-[0.2em]"><span className="w-8 h-8 rounded-xl bg-[#1488fc]/10 text-[#1488fc] flex items-center justify-center text-xs font-black shadow-inner">{activeDay}</span><span>{currentDayPlan.label}</span><span className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-1 text-[9px] text-blue-200">{formatMonthDay(currentDayDate)}</span></h4>
+                              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-400">{tripData.currencySymbol || '$'}{activeDayCost.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          {currentDayPlan.activities.map((activity, idx) => {
+                            const detailsUrl = activity.bookingUrl || (activity.type === "flight" ? googleFlightsSearchUrl(`${activity.name} ${tripData.destination}`) : "");
+
+                            return (
+                            <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.05 }} onClick={() => setMapFocusQuery(activity.locationQuery)} className={`cursor-pointer group min-h-fit p-5 rounded-2xl border transition-all duration-300 relative overflow-visible ${mapFocusQuery === activity.locationQuery ? 'bg-[#1488fc] text-white border-transparent shadow-2xl shadow-blue-500/40 scale-[1.02]' : 'bg-[#1e1e22] border-white/5 hover:border-[#1488fc]/50 hover:bg-[#25252a]'}`}>
+                              {mapFocusQuery === activity.locationQuery && <div className="absolute top-0 right-0 p-2 opacity-50"><MapPin className="w-4 h-4" /></div>}
+                              <div className="flex justify-between items-start mb-3"><span className={`text-[9px] font-bold uppercase tracking-widest ${mapFocusQuery === activity.locationQuery ? 'text-blue-100' : 'text-[#1488fc]'}`}>{activity.time}</span><span className={`text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${mapFocusQuery === activity.locationQuery ? 'bg-white/20' : 'bg-white/5 text-[#8a8a8f]'}`}>{activity.type}</span></div>
+                              <h5 className="font-bold text-sm tracking-tight flex items-center">
+                                {activity.name}
+                                {typeof activity.rating === "number" && <StarRating rating={activity.rating} />}
+                              </h5>
+                              <p className={`text-[11px] mt-2 leading-relaxed ${mapFocusQuery === activity.locationQuery ? 'text-blue-50/80' : 'text-[#8a8a8f]'}`}>{activity.description}</p>
+                              {activity.type === "flight" && (
+                                <div className={`mt-3 rounded-xl border px-3 py-2 text-[10px] leading-5 ${mapFocusQuery === activity.locationQuery ? 'border-white/15 bg-white/10 text-blue-50' : 'border-blue-400/20 bg-blue-500/10 text-blue-100'}`}>
+                                  Fare estimate. Compare live route prices on Google Flights before booking.
+                                </div>
+                              )}
+                              <div className={`mt-5 pt-3 border-t flex justify-between items-center ${mapFocusQuery === activity.locationQuery ? 'border-white/10' : 'border-white/5'}`}><span className="text-xs font-black">{tripData.currencySymbol || '$'}{activity.estimatedCost}</span><div className="flex gap-4">{detailsUrl && <a href={detailsUrl} target="_blank" rel="noopener noreferrer" className={`text-[9px] font-bold uppercase tracking-widest border-b ${mapFocusQuery === activity.locationQuery ? 'text-white border-white/40' : 'text-[#1488fc] border-[#1488fc]/40'}`} onClick={(e) => e.stopPropagation()}>{activity.type === "flight" ? "Flights" : "Details"}</a>}<button className="text-[9px] font-bold uppercase tracking-widest opacity-60 border-b border-transparent hover:opacity-100" onClick={(e) => { e.stopPropagation(); setMapFocusQuery(activity.locationQuery); }}>Map</button></div></div>
+                            </motion.div>
+                          )})}
+                        </>
+                      )}
+                    </div>
+                    <div className="flex-1 rounded-3xl overflow-hidden ring-1 ring-white/[0.08] shadow-2xl relative bg-[#1e1e22] min-h-[360px]">
+                      {hasMapsKey ? (
+                        <iframe title="Trip map" width="100%" height="100%" style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg) contrast(110%) brightness(95%)' }} loading="lazy" allowFullScreen src={mapUrl}></iframe>
+                      ) : (
+                        <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center p-10">
+                          <MapPin className="w-12 h-12 text-blue-500 mb-5" />
+                          <p className="text-xs font-black uppercase tracking-[0.2em] text-white mb-2">{displayQuery}</p>
+                          <p className="max-w-sm text-[11px] leading-relaxed text-[#8a8a8f]">Add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to enable the embedded operating map. Location focus still updates as you select itinerary items.</p>
+                          <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(displayQuery)}`} target="_blank" rel="noopener noreferrer" className="mt-6 rounded-full bg-white/10 px-5 py-2 text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/15">Open Maps</a>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 pointer-events-none border-[12px] border-[#0f0f0f] rounded-3xl" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* VIEW: SETTINGS (AUTONOMY) */}
+            {activeLayer === "settings" && (
+              !isSignedIn ? (
+                <LockedView title="Agent Intelligence" description="Autonomy thresholds and custom trust-dial settings are encrypted within your secure intelligence profile." icon={Settings} />
+              ) : (
+                <div className="flex-1 p-12 overflow-y-auto scrollbar-hide">
+                  <div className="max-w-4xl">
+                    <h1 className="text-5xl font-serif italic tracking-wide mb-4">Account Settings</h1>
+                    <p className="text-[#8a8a8f] text-xs font-bold uppercase tracking-[0.3em] mb-10">Set the default traveler details Venture should remember while planning</p>
+                    
+                    <div className="mb-8 p-8 rounded-3xl bg-[#1e1e22] ring-1 ring-white/[0.08] shadow-2xl">
+                      <div className="mb-8 flex items-start justify-between gap-6">
+                        <div>
+                          <h2 className="text-xl font-black uppercase tracking-tight mb-2">Traveler Profile</h2>
+                          <p className="text-[11px] leading-6 text-[#8a8a8f]">These defaults are sent with trip requests so Venture can avoid asking for the same details every time.</p>
+                        </div>
+                        <UserButton appearance={{ elements: { userButtonAvatarBox: "w-10 h-10 rounded-xl" } }} />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <SettingsInput
+                          label="Display name"
+                          value={profile.name}
+                          placeholder="Guest"
+                          onChange={(value) => setProfile({ ...profile, name: value })}
+                        />
+                        <SettingsInput
+                          label="Nationality"
+                          value={profile.nationality}
+                          placeholder="United States"
+                          onChange={(value) => setProfile({ ...profile, nationality: value })}
+                        />
+                        <SettingsInput
+                          label="Passports"
+                          value={profile.passports.join(", ")}
+                          placeholder="US, India, UK"
+                          onChange={(value) =>
+                            setProfile({
+                              ...profile,
+                              passports: value
+                                .split(",")
+                                .map((passport) => passport.trim())
+                                .filter(Boolean),
+                            })
+                          }
+                        />
+                        <SettingsSelect
+                          label="Seat preference"
+                          value={profile.seatPreference}
+                          options={[
+                            { value: "window", label: "Window" },
+                            { value: "aisle", label: "Aisle" },
+                            { value: "extra-legroom", label: "Extra legroom" },
+                          ]}
+                          onChange={(value) =>
+                            setProfile({
+                              ...profile,
+                              seatPreference:
+                                value as TravelerProfile["seatPreference"],
+                            })
+                          }
+                        />
+                        <SettingsSelect
+                          label="Meal preference"
+                          value={profile.mealPreference}
+                          options={[
+                            { value: "none", label: "No default" },
+                            { value: "vegetarian", label: "Vegetarian" },
+                            { value: "vegan", label: "Vegan" },
+                            { value: "gluten-free", label: "Gluten-free" },
+                          ]}
+                          onChange={(value) =>
+                            setProfile({
+                              ...profile,
+                              mealPreference:
+                                value as TravelerProfile["mealPreference"],
+                            })
+                          }
+                        />
+                        <SettingsSelect
+                          label="Budget style"
+                          value={profile.budgetTier}
+                          options={[
+                            { value: "budget", label: "Budget" },
+                            { value: "boutique", label: "Boutique" },
+                            { value: "luxury", label: "Luxury" },
+                          ]}
+                          onChange={(value) =>
+                            setProfile({
+                              ...profile,
+                              budgetTier: value as TravelerProfile["budgetTier"],
+                            })
+                          }
+                        />
+                        <div className="md:col-span-2">
+                          <SettingsTextArea
+                            label="Accessibility and mobility"
+                            value={profile.accessibilityNeeds}
+                            placeholder="Wheelchair user, limited walking, stroller access, sensory-friendly spaces, elevator access, accessible bathrooms..."
+                            onChange={(value) =>
+                              setProfile({
+                                ...profile,
+                                accessibilityNeeds: value,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-10 rounded-3xl bg-[#1e1e22] ring-1 ring-white/[0.08] shadow-2xl">
+                      <div className="flex justify-between items-center mb-10">
+                        <div>
+                          <h2 className="text-xl font-black uppercase tracking-tight mb-2">Autonomy Dial</h2>
+                          <p className="text-[10px] text-[#8a8a8f] font-bold uppercase tracking-widest">Current Mode: {profile.autonomyLevel}</p>
+                        </div>
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${profile.autonomyLevel === 'autonomous' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40' : 'bg-white/5 text-zinc-700'}`}>
+                          <Sparkles className="w-6 h-6" />
+                        </div>
+                      </div>
+
+                      <input 
+                        type="range" 
+                        min="0" 
+                        max="2" 
+                        step="1" 
+                        value={profile.autonomyLevel === 'manual' ? 0 : profile.autonomyLevel === 'hybrid' ? 1 : 2} 
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value);
+                          setProfile({...profile, autonomyLevel: val === 0 ? 'manual' : val === 1 ? 'hybrid' : 'autonomous'});
+                        }} 
+                        className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-blue-600 mb-6" 
+                      />
+                      
+                      <div className="grid grid-cols-3 text-center">
+                        <div className={`text-[10px] font-black uppercase tracking-widest transition-colors ${profile.autonomyLevel === 'manual' ? 'text-white' : 'text-zinc-600'}`}>Manual Approval</div>
+                        <div className={`text-[10px] font-black uppercase tracking-widest transition-colors ${profile.autonomyLevel === 'hybrid' ? 'text-white' : 'text-zinc-600'}`}>Hybrid</div>
+                        <div className={`text-[10px] font-black uppercase tracking-widest transition-colors ${profile.autonomyLevel === 'autonomous' ? 'text-white' : 'text-zinc-600'}`}>Full Autonomy</div>
+                      </div>
+
+                      <div className="mt-12 p-6 rounded-2xl bg-white/5 border border-white/10 space-y-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Auto-rebook delays</span>
+                          <div className={`w-8 h-4 rounded-full relative ${profile.autonomyLevel === 'autonomous' ? 'bg-blue-600' : 'bg-zinc-700'}`}>
+                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${profile.autonomyLevel === 'autonomous' ? 'right-1' : 'left-1'}`} />
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Seat selection</span>
+                          <div className={`w-8 h-4 rounded-full relative ${profile.autonomyLevel !== 'manual' ? 'bg-blue-600' : 'bg-zinc-700'}`}>
+                            <div className={`absolute top-1 w-2 h-2 bg-white rounded-full transition-all ${profile.autonomyLevel !== 'manual' ? 'right-1' : 'left-1'}`} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {hasPlan && (
+        <>
+          <button
+            onClick={() => setIsVentureOpen(true)}
+            className="absolute bottom-6 right-6 z-[70] inline-flex items-center gap-3 rounded-full border border-blue-300/30 bg-[#1488fc] px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white shadow-2xl shadow-blue-500/30 transition hover:bg-[#1a94ff]"
+          >
+            <Bot className="h-4 w-4" />
+            Venture
+          </button>
+
+          <AnimatePresence>
+            {isVentureOpen && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-[80] flex bg-black/35 backdrop-blur-sm"
+                onClick={() => setIsVentureOpen(false)}
+              >
+                <motion.div
+                  initial={{ y: "100%", opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: "100%", opacity: 0 }}
+                  transition={{ type: "spring", damping: 28, stiffness: 260 }}
+                  onClick={(event) => event.stopPropagation()}
+                  className="w-full h-full bg-[#151a22] shadow-2xl flex flex-col"
+                >
+                  <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-blue-500 text-white">
+                        <Bot className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.18em] text-white">Venture</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-blue-200">Trip editor</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsVentureOpen(false)}
+                      className="rounded-full border border-white/10 bg-white/5 p-2 text-white/60 transition hover:text-white"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <div ref={ventureScrollRef} className="flex-1 space-y-3 overflow-y-auto px-5 py-4 scrollbar-hide">
+                    {ventureMessages.map((message, index) => (
+                      <div
+                        key={`${message.role}-${index}`}
+                        className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                      >
+                        <div
                           className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-6 ${
                             message.role === "user"
                               ? "bg-[#1488fc] text-white"
