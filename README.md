@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Venture AI
 
-## Getting Started
+Venture is a travel itinerary planner built for a hackathon. Describe a trip, answer a few questions about your preferences, and generate a day-by-day plan. Signed-in users can save trips and return to them later.
 
-First, run the development server:
+[Live demo](https://venture-blue-beta.vercel.app/)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## How it works
+
+The planner uses Groq for the conversation that collects trip details. Gemini generates the itinerary and can call flight and hotel search tools backed by SerpApi. The interface displays activities, estimated costs, and a map. Prisma stores saved itineraries in PostgreSQL, with Clerk handling sign-in.
+
+The app uses Next.js, React, and TypeScript. The main parts are:
+
+- `src/app/planner/page.tsx`: planner interface and itinerary display.
+- `src/app/api/chat/route.ts`: conversation, itinerary generation, and search tools.
+- `src/app/api/ventures/`: save, list, and delete trips for the signed-in user.
+- `prisma/schema.prisma`: saved-trip data model.
+
+## Run locally
+
+Use Node.js 22 and npm.
+
+```sh
+git clone https://github.com/Manaskumm/venture.git
+cd venture
+npm ci
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create a `.env` file in the repository root with your own service credentials:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Used for |
+| --- | --- |
+| `GEMINI_API_KEY` | Itinerary generation and conversation fallback |
+| `GROQ_API_KEY` | Trip-planning conversation |
+| `DATABASE_URL` | PostgreSQL connection for saved trips |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk sign-in interface |
+| `CLERK_SECRET_KEY` | Server-side authentication |
+| `SERPAPI_KEY` | Flight and hotel searches; required for live search results |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Optional embedded map |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Generate the Prisma client and create the tables in a development database:
 
-## Learn More
+```sh
+npx prisma generate
+npx prisma db push
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+Open [localhost:3000](http://localhost:3000). The planner is at `/planner`; saved trips are at `/ventures` and require sign-in.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```sh
+npx prisma generate
+npm run build
+npm start
+```
 
-## Deploy on Vercel
+The app needs a Next.js server for its API routes. Set the same environment variables on the deployment host and configure Clerk for that domain.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Limits
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Generated plans and costs need checking before booking. Flight and hotel search depends on SerpApi credentials and provider availability; a generated estimate is not a confirmed price. The app links to booking providers rather than making reservations. Without a Google Maps key, itinerary selection still works, but the embedded map is unavailable.
